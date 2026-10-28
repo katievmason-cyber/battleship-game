@@ -183,3 +183,46 @@ test("the computer can win too", () => {
   assert.equal(game.winner, "ai");
   assert.equal(game.phase, "over");
 });
+
+test("moving a ship along onto its own squares is allowed", () => {
+  const board = B.createBoard();
+  B.placeShip(board, "carrier", 0, 0, true); // A1..A5
+  assert.ok(B.moveShip(board, "carrier", 0, 1, true).ok); // A2..A6 overlaps its old A2..A5
+  assert.equal(board.occupied.has(B.key(0, 0)), false);
+  assert.equal(board.occupied.get(B.key(0, 5)).id, "carrier");
+  assert.equal(board.ships.length, 1);
+});
+
+test("a ship can be rotated in place", () => {
+  const board = B.createBoard();
+  B.placeShip(board, "cruiser", 4, 4, true);
+  assert.ok(B.moveShip(board, "cruiser", 4, 4, false).ok);
+  assert.equal(B.isHorizontal(board.ships[0]), false);
+  assert.deepEqual(board.ships[0].cells, [[4, 4], [5, 4], [6, 4]]);
+});
+
+test("an illegal move leaves the ship where it was", () => {
+  const board = B.createBoard();
+  B.placeShip(board, "carrier", 0, 0, true);
+  B.placeShip(board, "destroyer", 2, 0, true);
+  const before = board.ships.find((s) => s.id === "destroyer").cells;
+  assert.equal(B.moveShip(board, "destroyer", 0, 3, true).reason, "overlap");
+  assert.equal(B.moveShip(board, "destroyer", 2, 9, true).reason, "out-of-bounds");
+  assert.deepEqual(board.ships.find((s) => s.id === "destroyer").cells, before);
+  assert.equal(board.occupied.size, 7);
+});
+
+test("moveShip places a ship that isn't on the board yet", () => {
+  const board = B.createBoard();
+  assert.ok(B.moveShip(board, "submarine", 9, 7, true).ok);
+  assert.equal(B.checkMove(board, "battleship", 9, 6, true).reason, "overlap");
+});
+
+test("ships can't be moved once the board has been fired at", () => {
+  const board = B.createBoard();
+  B.placeShip(board, "destroyer", 0, 0, true);
+  B.receiveShot(board, 0, 0);
+  assert.equal(B.moveShip(board, "destroyer", 5, 5, true).reason, "battle-started");
+  assert.deepEqual(board.ships[0].cells, [[0, 0], [0, 1]]);
+  assert.equal(board.ships[0].hits.size, 1);
+});

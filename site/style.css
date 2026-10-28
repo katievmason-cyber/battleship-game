@@ -1,19 +1,28 @@
 :root {
-  --bg: #0b1d2e;
-  --panel: #12304a;
-  --fg: #e8f1f8;
-  --muted: #9fb6c8;
-  --accent: #4fb3ff;
-  --water: #1c4a6e;
-  --water-hover: #2a6493;
-  --ship: #8a9bab;
-  --hit: #ff6b4a;
-  --sunk: #8b1e1e;
-  --miss: #d6e4ef;
+  --bg: #2b0b22;
+  --panel: #45133b;
+  --fg: #fff0f7;
+  --muted: #e3a9ca;
+  --accent: #ff5fa2;
+  --on-accent: #2b0b22;
+  --water: #6b2a5c;
+  --water-hover: #8b3a77;
+  --ship: #a7b2bd;
+  --hit: #ff3b30;
+  --sunk: #23040f;
+  --miss: #ffe3f0;
   --ok: #3ecf8e;
-  --bad: #ff4a6b;
+  --bad: #e0242c;
+  --highlight: #ffe14d;
   --cell-gap: 2px;
 }
+
+/* Ships are grey; shapes, deck details and short codes tell them apart. */
+[data-ship="carrier"] { --ship-color: #c3ccd5; }
+[data-ship="battleship"] { --ship-color: #9aa6b2; }
+[data-ship="cruiser"] { --ship-color: #b2bcc6; }
+[data-ship="submarine"] { --ship-color: #7f8b97; }
+[data-ship="destroyer"] { --ship-color: #a7b2bd; }
 
 * { box-sizing: border-box; }
 
@@ -48,13 +57,13 @@ button {
   border-radius: 6px;
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #04121f;
+  color: var(--on-accent);
   font-weight: 600;
   cursor: pointer;
 }
 button.secondary { background: transparent; color: var(--fg); }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
-button:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
+button:focus-visible { outline: 3px solid var(--highlight); outline-offset: 2px; }
 
 #status {
   min-height: 3em;
@@ -81,9 +90,28 @@ button:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
   padding: 0;
   margin: 0 0 0.75rem;
 }
-#ship-list button { background: transparent; color: var(--fg); border-color: var(--muted); font-weight: 400; }
+#ship-list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  background: transparent;
+  color: var(--fg);
+  border-color: var(--muted);
+  font-weight: 400;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
 #ship-list button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 #ship-list button.placed { color: var(--muted); text-decoration: line-through; }
+#ship-list button.placed .mini { opacity: 0.35; }
+
+.mini { display: inline-block; width: calc(var(--len) * 0.9rem); height: 0.9rem; color: var(--ship-color); vertical-align: middle; }
+.mini svg, .drag-ghost svg { display: block; width: 100%; height: 100%; }
+/* Absolutely positioned so the picture never stretches the grid rows. */
+.ship-shape svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
@@ -116,6 +144,8 @@ button:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
 }
 
 .cell {
+  position: relative;
+  z-index: 1;
   aspect-ratio: 1;
   min-width: 0;
   padding: 0;
@@ -129,26 +159,65 @@ button:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
   cursor: default;
 }
 
-.cell.ship { background: var(--ship); }
+/* Ship pictures sit underneath their cells, so ship cells are see-through. */
+.ship-shape {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--water);
+  color: var(--ship-color);
+  pointer-events: none;
+}
+.ship-shape .code {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(0.5rem, 1.6vw, 0.72rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: rgba(20, 24, 30, 0.85);
+}
+.ship-shape.ghost { opacity: 0.45; }
+.ship-shape.sunk { filter: saturate(0.6) brightness(0.8); }
+
+.cell.ship { background: transparent; }
 .cell.miss { color: var(--miss); }
 .cell.hit { background: var(--hit); color: #2a0a00; }
-.cell.sunk { background: var(--sunk); color: #ffd7cf; }
-.cell.revealed { box-shadow: inset 0 0 0 3px var(--ship); }
+.cell.sunk { background: var(--sunk); color: #ffd1e3; }
+.cell.ship.hit { background: rgba(255, 59, 48, 0.75); }
+.cell.ship.sunk { background: rgba(35, 4, 15, 0.55); }
 .cell.preview-ok { background: var(--ok); }
-.cell.preview-bad { background: var(--bad); }
-.cell.last-shot { outline: 2px solid #ffd54a; outline-offset: -2px; }
+.cell.preview-bad { background: repeating-linear-gradient(45deg, var(--bad) 0 4px, #a3121a 4px 8px); }
+.cell.last-shot { outline: 2px solid var(--highlight); outline-offset: -2px; }
 
 .board.targetable .cell:not(.hit):not(.miss):not(.sunk) { cursor: crosshair; }
 .board.targetable .cell:not(.hit):not(.miss):not(.sunk):hover { background: var(--water-hover); }
 .board.placing .cell { cursor: pointer; }
+.board.placing .cell.ship { cursor: grab; touch-action: none; }
+
+.drag-ghost {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  color: var(--ship-color);
+  opacity: 0.85;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+body.dragging, body.dragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
 .board.inactive { opacity: 0.55; }
 
 .stats { margin: 0.5rem 0 0.25rem; color: var(--muted); font-size: 0.9rem; }
 
 .fleet { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: 0.85rem; }
-.fleet .pips { letter-spacing: 1px; color: var(--ship); }
+.fleet li { display: flex; align-items: center; gap: 0.3rem; }
+.fleet .code { color: var(--muted); font-size: 0.75rem; }
 .fleet .sunk { color: var(--muted); text-decoration: line-through; }
-.fleet .sunk .pips { color: var(--sunk); }
+.fleet .sunk .mini { opacity: 0.35; }
 
 .log-panel { margin-top: 1.5rem; }
 #log {
@@ -169,11 +238,13 @@ button:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
   background: var(--water); font-weight: 700; font-size: 0.8rem; margin-left: 0.6rem;
 }
 .key.ship { background: var(--ship); }
+.key.miss { color: var(--miss); }
 .key.hit { background: var(--hit); color: #2a0a00; }
 .key.sunk { background: var(--sunk); color: #ffd7cf; }
 
 .overlay {
   position: fixed; inset: 0;
+  z-index: 20;
   display: flex; align-items: center; justify-content: center;
   background: rgba(0, 0, 0, 0.6);
   padding: 1rem;
