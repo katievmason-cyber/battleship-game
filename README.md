@@ -18,3 +18,9 @@ npm test           # Node 20+ built-in test runner, no installs needed
 - `site/` is the whole website (HTML, CSS, JS). Nothing gets compiled.
 - `tests/` holds automated tests, run by GitHub Actions on every pull request (`.github/workflows/ci.yml`).
 - Every merge to `main` runs the tests again and, if they pass, publishes `site/` to GitHub Pages (`.github/workflows/deploy.yml`).
+
+## The AI opponent
+`site/js/ai.js` uses "hunt and target": it searches on a checkerboard pattern, fires next to any hit, then follows the line of a ship until it sinks. It only sees the results of its own shots. Run the simulator to see how well it plays:
+```
+node scripts/simulate.js 1000
+```
