@@ -3,13 +3,69 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Play Battleship in your browser against a computer opponent." />
   <title>Battleship vs. AI</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <header>
+    <h1>Battleship <span>vs. AI</span></h1>
+    <button id="new-game" type="button" class="secondary">New game</button>
+  </header>
+
   <main>
-    <h1>Battleship vs. AI</h1>
-    <p id="status">Coming soon: the game is under construction.</p>
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <section id="setup" aria-label="Place your ships">
+      <ol id="ship-list"></ol>
+      <div class="controls">
+        <button id="rotate" type="button" class="secondary">Rotate (R): <span id="orientation">Horizontal</span></button>
+        <button id="random" type="button" class="secondary">Random</button>
+        <button id="clear" type="button" class="secondary">Clear</button>
+        <button id="start" type="button" disabled>Start battle</button>
+      </div>
+    </section>
+
+    <div class="boards">
+      <section class="board-panel" aria-labelledby="player-title">
+        <h2 id="player-title">Your fleet</h2>
+        <div id="player-board" class="board"></div>
+        <p class="stats" id="ai-stats"></p>
+        <ul class="fleet" id="player-fleet" aria-label="Your ships"></ul>
+      </section>
+      <section class="board-panel" aria-labelledby="enemy-title">
+        <h2 id="enemy-title">Enemy waters</h2>
+        <div id="enemy-board" class="board"></div>
+        <p class="stats" id="player-stats"></p>
+        <ul class="fleet" id="enemy-fleet" aria-label="Enemy ships"></ul>
+      </section>
+    </div>
+
+    <section aria-labelledby="log-title" class="log-panel">
+      <h2 id="log-title">Shot log</h2>
+      <ol id="log" reversed></ol>
+    </section>
+
+    <p class="legend" aria-hidden="true">
+      <span class="key ship"></span> your ship
+      <span class="key miss">•</span> miss
+      <span class="key hit">✕</span> hit
+      <span class="key sunk">✕</span> sunk
+    </p>
   </main>
+
+  <div id="game-over" class="overlay" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="result-title">
+      <h2 id="result-title"></h2>
+      <p id="result-detail"></p>
+      <button id="play-again" type="button">Play again</button>
+      <button id="view-board" type="button" class="secondary">View boards</button>
+    </div>
+  </div>
+
+  <noscript><p>This game needs JavaScript turned on.</p></noscript>
+  <script src="js/game.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/ui.js"></script>
 </body>
 </html>
