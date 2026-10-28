@@ -16,16 +16,20 @@ Each entry records:
 
 _None found yet. Phases 2 (rules engine) and 3 (AI) passed all their tests on the first run._
 
-## Process and deployment issues
+## Deployment issues
 
-### PROC-001: Deploying needed a setting only the repo owner could change
+### DEP-001: Deploying needed a setting only the repo owner could change
 - **Found by:** Devin, while setting up deployment (Phase 1)
 - **Symptom:** The automated attempt to switch on GitHub Pages failed with `403 Resource not accessible by integration`, so the deploy workflow had nowhere to publish.
 - **Root cause:** Devin's GitHub access can push code and open PRs, but it isn't allowed to change repository settings, and the Pages source is a setting. (This risk was predicted in the plan.)
 - **Fix:** Kate set Settings → Pages → Source = **GitHub Actions**.
 - **Verification:** After PR #1 merged, the *Deploy to GitHub Pages* workflow succeeded and https://katievmason-cyber.github.io/battleship-game/ returned HTTP 200 with the placeholder page. `style.css` also loaded (HTTP 200), confirming the relative paths work under the `/battleship-game/` sub-folder.
 
-### PROC-002: Merging Phase 1 accidentally closed the Phase 2 pull request
+## Workflow issues
+
+Problems with how changes were reviewed and merged. These didn't affect the live game.
+
+### WF-001: Merging Phase 1 accidentally closed the Phase 2 pull request
 - **Found by:** GitHub notification, right after merging PR #1
 - **Symptom:** [PR #2](https://github.com/katievmason-cyber/battleship-game/pull/2) (rules engine) changed to *Closed*, not merged, even though nobody had closed it.
 - **Steps to reproduce:** Open PR B whose base is PR A's branch (a "stacked" PR). Merge PR A with `gh pr merge --delete-branch`.
