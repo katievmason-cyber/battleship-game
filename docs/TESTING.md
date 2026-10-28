@@ -32,3 +32,23 @@ Recorded test of https://katievmason-cyber.github.io/battleship-game/ in Chrome,
 **Not tested:** real phones (phone size was simulated in Chrome) and browsers other than Chrome.
 
 **Bugs found:** none reproducible. One false alarm is explained in [BUGS.md](BUGS.md).
+
+## Ship pictures and drag-and-drop (PR #7)
+Recorded local Chrome test of the new placement, using real mouse and touch input, through to complete wins and losses.
+
+| Area | Result |
+|---|---|
+| Visuals: pink theme, distinct grey ships, CV/BB/CA/SS/DD codes, hit/miss/sunk markers, sunk enemy shapes, faded reveal after a loss | Pass |
+| Mouse drag: every ship, grabbed at different points; R mid-drag; edge placement; moving onto its own squares; overlap, off-edge and outside drops rejected with the ship kept in place; Escape cancels | Pass |
+| No accidental pickup after a drag; click-to-place and click-to-pick-up still work | Pass |
+| Random, Clear and New game during a drag cancel it cleanly | Pass |
+| Board size stays 440×440 px with equal rows, including rotated ships | Pass (fix for GAME-001) |
+| Start battle while holding a ship | Failed, then pass after fix (GAME-002) |
+| Rejected drag, then green preview, then click moves the ship | Pass after fix (GAME-003) |
+| Touch at 375 px: drag from palette, move a placed ship, tap to place, page still scrolls, boards stacked, no sideways overflow | Pass |
+| Full games: a win in 19 shots and a loss after 61 computer shots; no shots allowed after the end | Pass |
+| Game-over Play again / View boards, desktop and 375 px | Failed, then pass after fix (GAME-005) |
+| Browser console errors | None |
+
+Not tested: physical phones/tablets (touch was emulated in Chrome) and browsers other than Chrome. The rule against moving a ship once shots have been fired (GAME-004) has no way to trigger it from the screen, so it's covered by a unit test only.
+
