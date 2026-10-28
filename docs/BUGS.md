@@ -22,6 +22,14 @@ Each entry records:
 - **Fix:** The picture is now absolutely positioned inside its item, and the item has `min-height: 0`, so the picture fills whatever space the squares give it and never sets their size.
 - **Verification:** The board's measured height was 440 px both before and after Random placed vertical ships. Screenshots at desktop and 375 px widths show square cells and no overlap.
 
+### GAME-002: A ship could be moved after the battle had started
+- **Found by:** recorded browser test (testing agent) of the drag-and-drop branch
+- **Symptom:** If you were still holding a ship mid-drag and pressed Start battle with the keyboard, the dragged ship stayed under the pointer. Letting go moved your ship *during the battle*, and the status went back to "Fleet ready… Press Start battle".
+- **Steps to reproduce:** Random, then start dragging the Carrier from the palette and keep the mouse button held. Tab to Start battle and press Space. Drop the ship on any free run of 5 squares.
+- **Root cause:** Random, Clear and New game cancelled an active drag, but Start battle didn't. The drop handler also never checked whether the game was still in setup (`onPointerUp` in `site/js/ui.js`).
+- **Fix:** `startBattle` now cancels any drag, and `onPointerUp` ignores drops unless the game is still in the setup phase.
+- **Verification:** see TESTING.md (retest of this repro).
+
 Earlier phases: the rules engine and AI tests passed on the first run, and the recorded browser test of the live site found no reproducible game bugs (see [TESTING.md](TESTING.md)).
 
 One false alarm, not counted as a bug: during browser testing a fast double-click looked like it gave the player two shots in a row. Measuring showed the test tool had paused about 1 second between clicks, longer than the computer's 0.6-second "thinking" delay, so the computer had already replied. Re-tested with three real clicks 31 ms apart: exactly one shot was accepted.

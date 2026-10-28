@@ -236,6 +236,7 @@
 
   function onPointerUp(e) {
     if (!drag || e.pointerId !== drag.pointerId) return;
+    if (game.phase !== "setup") return endDrag();
     const { id, active, fromBoard } = drag;
     const target = hoverCell;
     endDrag();
@@ -268,6 +269,7 @@
   }
 
   function startBattle() {
+    cancelDrag();
     if (!B.startBattle(game).ok) return;
     hoverCell = null;
     setStatus("Battle stations! Your turn: pick a square in Enemy waters.");
