@@ -1,0 +1,13 @@
+{
+  "name": "battleship-game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Battleship vs. an AI opponent, plain HTML/CSS/JS",
+  "scripts": {
+    "test": "node --test",
+    "start": "python3 -m http.server 8000 --directory site"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
