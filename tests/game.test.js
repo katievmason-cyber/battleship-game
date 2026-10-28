@@ -217,3 +217,12 @@ test("moveShip places a ship that isn't on the board yet", () => {
   assert.ok(B.moveShip(board, "submarine", 9, 7, true).ok);
   assert.equal(B.checkMove(board, "battleship", 9, 6, true).reason, "overlap");
 });
+
+test("ships can't be moved once the board has been fired at", () => {
+  const board = B.createBoard();
+  B.placeShip(board, "destroyer", 0, 0, true);
+  B.receiveShot(board, 0, 0);
+  assert.equal(B.moveShip(board, "destroyer", 5, 5, true).reason, "battle-started");
+  assert.deepEqual(board.ships[0].cells, [[0, 0], [0, 1]]);
+  assert.equal(board.ships[0].hits.size, 1);
+});

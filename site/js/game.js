@@ -98,7 +98,9 @@
   }
 
   // Moves (or first places) a ship. If the new spot is illegal the board is unchanged.
+  // Only allowed before any shots: moving would lose the ship's recorded hits.
   function moveShip(board, shipId, row, col, horizontal) {
+    if (board.shots.size > 0) return { ok: false, reason: "battle-started" };
     const check = checkMove(board, shipId, row, col, horizontal);
     if (!check.ok) return check;
     removeShip(board, shipId);

@@ -30,6 +30,21 @@ Each entry records:
 - **Fix:** `startBattle` now cancels any drag, and `onPointerUp` ignores drops unless the game is still in the setup phase.
 - **Verification:** see TESTING.md (retest of this repro).
 
+### GAME-003: A green preview, but clicking said the ship didn't fit
+- **Found by:** automated code review (Devin Review) on PR #7
+- **Symptom:** After a rejected drag of a ship that was already on the board, that ship stayed selected. Hovering showed green (fits), but clicking said it "doesn't fit on the board there" and nothing moved.
+- **Steps to reproduce:** Drag a placed Carrier off the board and let go. Hover an empty row so it shows green, then click.
+- **Root cause:** The preview used the new `checkMove` (a placed ship may move), but clicks still used `placeShip`, which refuses a ship that's already on the board (`onPlayerBoardClick` in `site/js/ui.js`).
+- **Fix:** Clicks now use `moveShip`, the same rule as the preview and drag-and-drop.
+- **Verification:** see TESTING.md (retest).
+
+### GAME-004: The rules engine allowed moving a ship that had been hit
+- **Found by:** automated code review (Devin Review) on PR #7
+- **Symptom:** None in the game: the screen only lets you move ships during setup. But a ship moved after being hit would lose its hits, and with those squares already fired at it could never be sunk, so the game couldn't end.
+- **Root cause:** `moveShip` creates a fresh ship (with no hits) and didn't check whether the board had been fired at (`site/js/game.js`).
+- **Fix:** `moveShip` refuses with `battle-started` once the board has any shots.
+- **Verification:** New unit test "ships can't be moved once the board has been fired at": the destroyer stays put and keeps its hit.
+
 Earlier phases: the rules engine and AI tests passed on the first run, and the recorded browser test of the live site found no reproducible game bugs (see [TESTING.md](TESTING.md)).
 
 One false alarm, not counted as a bug: during browser testing a fast double-click looked like it gave the player two shots in a row. Measuring showed the test tool had paused about 1 second between clicks, longer than the computer's 0.6-second "thinking" delay, so the computer had already replied. Re-tested with three real clicks 31 ms apart: exactly one shot was accepted.

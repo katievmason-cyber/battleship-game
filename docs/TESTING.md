@@ -1,8 +1,8 @@
 # Test results
 
 ## Automated tests
-`npm test` runs 40 tests (Node's built-in test runner) on every pull request and before every deploy:
-- **Rules engine** (`tests/game.test.js`, 24 tests): placement at edges, rotation, overlap, touching ships, moving and rotating a placed ship (illegal moves leave it where it was), random placement over 500 seeds, hit/miss/sunk, repeat shots, turn order, game over.
+`npm test` runs 41 tests (Node's built-in test runner) on every pull request and before every deploy:
+- **Rules engine** (`tests/game.test.js`, 25 tests): placement at edges, rotation, overlap, touching ships, moving and rotating a placed ship (illegal moves leave it where it was, and no moving once the battle has started), random placement over 500 seeds, hit/miss/sunk, repeat shots, turn order, game over.
 - **AI** (`tests/ai.test.js`, 11 tests): no repeated or off-board shots over 1,000 games, beats random guessing, follows a ship's line, turns around at water, handles ships packed together or in corners, and only sees its own shot results.
 - **Ship pictures** (`tests/ships.test.js`, 3 tests): every ship has its own picture and code, sized to its length and turned when vertical.
 - **Site** (`tests/site.test.js`, 2 tests): page metadata, and every file the page loads exists with the exact same name (GitHub Pages is case-sensitive).

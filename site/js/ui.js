@@ -116,7 +116,7 @@
       return;
     }
     if (!selectedShipId) return;
-    const placed = B.placeShip(game.player, selectedShipId, r, c, horizontal);
+    const placed = B.moveShip(game.player, selectedShipId, r, c, horizontal);
     if (!placed.ok) {
       setStatus(`Your ${shipName(selectedShipId)} ${whyNot(placed.reason)}. Try another square or rotate it.`);
       return;
