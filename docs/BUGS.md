@@ -28,7 +28,7 @@ Each entry records:
 - **Steps to reproduce:** Random, then start dragging the Carrier from the palette and keep the mouse button held. Tab to Start battle and press Space. Drop the ship on any free run of 5 squares.
 - **Root cause:** Random, Clear and New game cancelled an active drag, but Start battle didn't. The drop handler also never checked whether the game was still in setup (`onPointerUp` in `site/js/ui.js`).
 - **Fix:** `startBattle` now cancels any drag, and `onPointerUp` ignores drops unless the game is still in the setup phase.
-- **Verification:** see TESTING.md (retest of this repro).
+- **Verification:** Browser retest of the same steps: the ghost disappeared the moment Start battle was pressed, the Carrier stayed where it was after release, and the status stayed on the battle.
 
 ### GAME-003: A green preview, but clicking said the ship didn't fit
 - **Found by:** automated code review (Devin Review) on PR #7
@@ -36,7 +36,7 @@ Each entry records:
 - **Steps to reproduce:** Drag a placed Carrier off the board and let go. Hover an empty row so it shows green, then click.
 - **Root cause:** The preview used the new `checkMove` (a placed ship may move), but clicks still used `placeShip`, which refuses a ship that's already on the board (`onPlayerBoardClick` in `site/js/ui.js`).
 - **Fix:** Clicks now use `moveShip`, the same rule as the preview and drag-and-drop.
-- **Verification:** see TESTING.md (retest).
+- **Verification:** Browser retest: after a rejected Carrier drag, the empty row showed green and clicking moved the Carrier there.
 
 ### GAME-004: The rules engine allowed moving a ship that had been hit
 - **Found by:** automated code review (Devin Review) on PR #7
@@ -44,6 +44,14 @@ Each entry records:
 - **Root cause:** `moveShip` creates a fresh ship (with no hits) and didn't check whether the board had been fired at (`site/js/game.js`).
 - **Fix:** `moveShip` refuses with `battle-started` once the board has any shots.
 - **Verification:** New unit test "ships can't be moved once the board has been fired at": the destroyer stays put and keeps its hit.
+
+### GAME-005: Game-over buttons couldn't be clicked
+- **Found by:** recorded browser test (testing agent) of the drag-and-drop branch
+- **Symptom:** At the end of a game, clicking Play again or View boards did nothing. Board squares showed through the dialog. Escape still closed it.
+- **Steps to reproduce:** On a 1280×900 desktop window, finish a game and click the middle of Play again.
+- **Root cause:** To draw ship pictures underneath the squares, each square was given `z-index: 1` ("sit above"). The game-over overlay had no z-index, so the squares sat on top of it and caught the clicks. The browser confirmed it: the element under the button was square H10 (`site/style.css`, `.overlay`).
+- **Fix:** The overlay now has `z-index: 20`, so it sits above the boards (but below the drag ghost).
+- **Verification:** see TESTING.md (retest).
 
 Earlier phases: the rules engine and AI tests passed on the first run, and the recorded browser test of the live site found no reproducible game bugs (see [TESTING.md](TESTING.md)).
 
