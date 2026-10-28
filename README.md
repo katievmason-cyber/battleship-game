@@ -2,7 +2,9 @@
 
 A browser Battleship game: you against a computer opponent. Plain HTML, CSS and JavaScript with no build step and no dependencies.
 
-**Status:** under construction. See [docs/PLAN.md](docs/PLAN.md) for the plan and [docs/BUGS.md](docs/BUGS.md) for the bug log.
+**Play it:** https://katievmason-cyber.github.io/battleship-game/
+
+**Docs:** [plan](docs/PLAN.md) · [bug log](docs/BUGS.md) · [test results](docs/TESTING.md) · [debugging report](docs/DEBUGGING_REPORT.md)
 
 ## Run it locally
 ```
