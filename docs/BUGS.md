@@ -51,7 +51,7 @@ Each entry records:
 - **Steps to reproduce:** On a 1280×900 desktop window, finish a game and click the middle of Play again.
 - **Root cause:** To draw ship pictures underneath the squares, each square was given `z-index: 1` ("sit above"). The game-over overlay had no z-index, so the squares sat on top of it and caught the clicks. The browser confirmed it: the element under the button was square H10 (`site/style.css`, `.overlay`).
 - **Fix:** The overlay now has `z-index: 20`, so it sits above the boards (but below the drag ghost).
-- **Verification:** see TESTING.md (retest).
+- **Verification:** Browser retest at 1280×900 and 375 px: the element under each button is the button itself, View boards closes the dialog, and Play again resets to setup, by mouse click and by touch tap.
 
 Earlier phases: the rules engine and AI tests passed on the first run, and the recorded browser test of the live site found no reproducible game bugs (see [TESTING.md](TESTING.md)).
 

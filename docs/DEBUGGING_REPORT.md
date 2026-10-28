@@ -69,7 +69,7 @@ The plan listed the risky areas up front (edge placement, rapid clicks, the comp
 - **Symptom:** at the end of a game, clicking Play again or View boards did nothing. Escape still closed the dialog.
 - **Root cause:** to draw ship pictures underneath the squares, the squares were told to "sit above" (a CSS setting called z-index). The game-over dialog had no such setting, so the squares ended up on top of it and caught the clicks.
 - **Fix:** the dialog is now explicitly placed above the boards.
-- **Verification:** VERIFY_GAME005
+- **Verification:** browser retest at desktop (1280×900) and phone width (375 px): the element under each button is now the button itself, View boards closes the dialog and Play again resets to setup, both by mouse click and by touch tap.
 
 ## Lessons from the second round
 - **Each check caught something different.** Screenshots caught a layout bug, the browser test caught a keyboard edge case and a hidden layering problem, and code review caught two logic gaps that no test had covered.
