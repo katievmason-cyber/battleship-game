@@ -3,6 +3,7 @@
 (function () {
   const B = window.Battleship;
   const { createAI } = window.BattleshipAI;
+  const S = window.BattleshipShapes;
   const AI_DELAY_MS = 600;
 
   const $ = (id) => document.getElementById(id);
@@ -38,24 +39,32 @@
   let aiTimer = null;
   let stats;
   let lastShot;
+  let drag = null;
+  let suppressClick = false;
 
   const cells = { player: [], enemy: [] };
 
   function buildBoard(container, side) {
+    // Every item gets an explicit grid position so ship pictures can sit underneath the cells.
+    const put = (el, row, col) => {
+      el.style.gridRow = String(row + 1);
+      el.style.gridColumn = String(col + 1);
+      return el;
+    };
     container.innerHTML = "";
-    container.appendChild(document.createElement("span")).className = "label";
+    put(container.appendChild(document.createElement("span")), 0, 0).className = "label";
     for (let c = 0; c < B.SIZE; c++) {
-      const span = container.appendChild(document.createElement("span"));
+      const span = put(container.appendChild(document.createElement("span")), 0, c + 1);
       span.className = "label";
       span.textContent = c + 1;
     }
     for (let r = 0; r < B.SIZE; r++) {
-      const rowLabel = container.appendChild(document.createElement("span"));
+      const rowLabel = put(container.appendChild(document.createElement("span")), r + 1, 0);
       rowLabel.className = "label";
       rowLabel.textContent = String.fromCharCode(65 + r);
       cells[side][r] = [];
       for (let c = 0; c < B.SIZE; c++) {
-        const btn = container.appendChild(document.createElement("button"));
+        const btn = put(container.appendChild(document.createElement("button")), r + 1, c + 1);
         btn.type = "button";
         btn.className = "cell";
         btn.dataset.row = r;
@@ -81,7 +90,8 @@
     els.log.prepend(li);
   }
 
-  const shipName = (id) => B.FLEET.find((s) => s.id === id).name;
+  const shipDef = (id) => B.FLEET.find((s) => s.id === id);
+  const shipName = (id) => shipDef(id).name;
   const nextUnplacedShip = () => B.FLEET.find((def) => !game.player.ships.some((s) => s.id === def.id));
 
   // ---------- Setup phase ----------
@@ -100,37 +110,42 @@
     if (existing) {
       B.removeShip(game.player, existing.id);
       selectedShipId = existing.id;
-      horizontal = existing.cells.length < 2 || existing.cells[0][0] === existing.cells[1][0];
-      setStatus(`Picked up your ${existing.name}. Click to place it again.`);
+      horizontal = B.isHorizontal(existing);
+      setStatus(`Picked up your ${existing.name}. Click a square to place it again.`);
       render();
       return;
     }
     if (!selectedShipId) return;
     const placed = B.placeShip(game.player, selectedShipId, r, c, horizontal);
     if (!placed.ok) {
-      const why = placed.reason === "overlap" ? "overlaps another ship" : "doesn't fit on the board there";
-      setStatus(`Your ${shipName(selectedShipId)} ${why}. Try another square or rotate it.`);
+      setStatus(`Your ${shipName(selectedShipId)} ${whyNot(placed.reason)}. Try another square or rotate it.`);
       return;
     }
     afterPlacementChange();
   }
 
+  const whyNot = (reason) => (reason === "overlap" ? "overlaps another ship" : "doesn't fit on the board there");
+
   function afterPlacementChange() {
     const next = nextUnplacedShip();
     selectedShipId = next ? next.id : null;
     if (next) setStatus(`Place your ${next.name} (${next.length} squares).`);
-    else setStatus("Fleet ready. Press Start battle, or click a ship to move it.");
+    else setStatus("Fleet ready. Press Start battle, or drag a ship to move it.");
     render();
   }
 
   function rotate() {
     if (game.phase !== "setup") return;
     horizontal = !horizontal;
-    render();
+    if (drag && drag.active) {
+      drawGhost();
+      moveDrag(drag.x, drag.y);
+    } else render();
   }
 
   function randomFleet() {
     if (game.phase !== "setup") return;
+    cancelDrag();
     for (const ship of [...game.player.ships]) B.removeShip(game.player, ship.id);
     B.placeFleetRandomly(game.player);
     afterPlacementChange();
@@ -138,8 +153,118 @@
 
   function clearFleet() {
     if (game.phase !== "setup") return;
+    cancelDrag();
     for (const ship of [...game.player.ships]) B.removeShip(game.player, ship.id);
     afterPlacementChange();
+  }
+
+  // ---------- Drag and drop (mouse and touch, via pointer events) ----------
+
+  const DRAG_THRESHOLD_PX = 6;
+
+  function onPalettePointerDown(e) {
+    const btn = e.target.closest("button[data-ship]");
+    if (!btn || game.phase !== "setup" || e.button > 0) return;
+    const def = shipDef(btn.dataset.ship);
+    const pic = btn.querySelector(".mini").getBoundingClientRect();
+    const across = (e.clientX - pic.left) / pic.width;
+    const grab = across >= 0 && across <= 1 ? Math.min(def.length - 1, Math.floor(across * def.length)) : 0;
+    beginDrag(e, def.id, grab, false);
+  }
+
+  function onBoardPointerDown(e) {
+    if (game.phase !== "setup" || e.button > 0) return;
+    const cell = cellFromEvent(e);
+    const ship = cell && game.player.occupied.get(B.key(cell[0], cell[1]));
+    if (!ship) return;
+    const grab = ship.cells.findIndex(([r, c]) => r === cell[0] && c === cell[1]);
+    beginDrag(e, ship.id, grab, true);
+  }
+
+  function beginDrag(e, id, grab, fromBoard) {
+    drag = { id, grab, fromBoard, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY, active: false, ghost: null };
+  }
+
+  function onPointerMove(e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    if (!drag.active) {
+      if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < DRAG_THRESHOLD_PX) return;
+      drag.active = true;
+      selectedShipId = drag.id;
+      if (drag.fromBoard) horizontal = B.isHorizontal(game.player.ships.find((s) => s.id === drag.id));
+      drag.ghost = document.body.appendChild(document.createElement("div"));
+      drag.ghost.className = "drag-ghost";
+      drag.ghost.dataset.ship = drag.id;
+      document.body.classList.add("dragging");
+      drawGhost();
+    }
+    e.preventDefault();
+    moveDrag(e.clientX, e.clientY);
+  }
+
+  function boardPitch() {
+    const cell = cells.player[0][0].getBoundingClientRect();
+    const gap = parseFloat(getComputedStyle(els.playerBoard).columnGap) || 0;
+    return { size: cell.width, pitch: cell.width + gap };
+  }
+
+  function drawGhost() {
+    const { length } = shipDef(drag.id);
+    const { size, pitch } = boardPitch();
+    const long = `${pitch * length - (pitch - size)}px`;
+    drag.ghost.innerHTML = S.shipSvg(drag.id, length, horizontal);
+    drag.ghost.style.width = horizontal ? long : `${size}px`;
+    drag.ghost.style.height = horizontal ? `${size}px` : long;
+  }
+
+  function moveDrag(x, y) {
+    drag.x = x;
+    drag.y = y;
+    const { pitch } = boardPitch();
+    const along = (drag.grab + 0.5) * pitch;
+    drag.ghost.style.left = `${x - (horizontal ? along : pitch / 2)}px`;
+    drag.ghost.style.top = `${y - (horizontal ? pitch / 2 : along)}px`;
+    const under = document.elementFromPoint(x, y);
+    const btn = under && under.closest("#player-board .cell");
+    if (btn) {
+      const r = Number(btn.dataset.row);
+      const c = Number(btn.dataset.col);
+      hoverCell = horizontal ? [r, c - drag.grab] : [r - drag.grab, c];
+    } else hoverCell = null;
+    render();
+  }
+
+  function onPointerUp(e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const { id, active, fromBoard } = drag;
+    const target = hoverCell;
+    endDrag();
+    if (!active) return; // a plain click: the click handlers deal with it
+    suppressClick = true;
+    setTimeout(() => (suppressClick = false), 0);
+    const name = shipName(id);
+    if (!target) {
+      setStatus(fromBoard ? `Your ${name} stayed where it was. Drop ships onto Your fleet.` : `Drop your ${name} onto the squares of Your fleet.`);
+      return render();
+    }
+    const moved = B.moveShip(game.player, id, target[0], target[1], horizontal);
+    if (moved.ok) return afterPlacementChange();
+    setStatus(`Your ${name} ${whyNot(moved.reason)}${fromBoard ? ", so it stayed where it was" : ""}. Try another spot or rotate it (R).`);
+    render();
+  }
+
+  function endDrag() {
+    if (drag && drag.ghost) drag.ghost.remove();
+    drag = null;
+    hoverCell = null;
+    document.body.classList.remove("dragging");
+  }
+
+  function cancelDrag() {
+    if (!drag) return;
+    const wasActive = drag.active;
+    endDrag();
+    if (wasActive && game.phase === "setup") render();
   }
 
   function startBattle() {
@@ -219,6 +344,7 @@
   }
 
   function newGame() {
+    endDrag();
     clearTimeout(aiTimer);
     aiTimer = null;
     game = B.createGame();
@@ -230,7 +356,7 @@
     els.log.innerHTML = "";
     els.overlay.hidden = true;
     selectedShipId = B.FLEET[0].id;
-    setStatus(`Place your ships. Start with your Carrier (5 squares): click a square on Your fleet. Press R to rotate.`);
+    setStatus("Place your ships: drag each one onto Your fleet, or pick one and click a square. Press R to rotate.");
     render();
   }
 
@@ -238,16 +364,15 @@
 
   function previewCells() {
     if (game.phase !== "setup" || !hoverCell || !selectedShipId) return null;
-    const length = B.FLEET.find((s) => s.id === selectedShipId).length;
-    const ok = B.checkPlacement(game.player, selectedShipId, hoverCell[0], hoverCell[1], horizontal).ok;
+    const { length } = shipDef(selectedShipId);
+    const ok = B.checkMove(game.player, selectedShipId, hoverCell[0], hoverCell[1], horizontal).ok;
     const list = B.shipCells(hoverCell[0], hoverCell[1], length, horizontal).filter(([r, c]) => B.inBounds(r, c));
     return { ok, keys: new Set(list.map(([r, c]) => B.key(r, c))) };
   }
 
-  function drawCell(btn, { ship, shot, sunk, revealed, preview, last, label, disabled }) {
+  function drawCell(btn, { ship, shot, sunk, preview, last, label, disabled }) {
     btn.className = "cell";
     if (ship) btn.classList.add("ship");
-    if (revealed) btn.classList.add("revealed");
     if (shot === "miss") btn.classList.add("miss");
     if (shot === "hit") btn.classList.add(sunk ? "sunk" : "hit");
     if (preview) btn.classList.add(preview);
@@ -287,10 +412,9 @@
         const theirShot = game.enemy.shots.get(k);
         const theirSunk = theirs && theirs.hits.size === theirs.length;
         drawCell(cells.enemy[r][c], {
-          ship: false,
+          ship: Boolean(theirs) && (theirSunk || over),
           shot: theirShot,
           sunk: theirSunk,
-          revealed: Boolean(theirs) && (theirSunk || over),
           last: lastShot && lastShot.side === "enemy" && lastShot.r === r && lastShot.c === c,
           label: cellLabel(r, c, [theirShot ? (theirSunk ? `sunk ${theirs.name}` : theirShot) : "not fired at"]),
           disabled: game.phase !== "player" && !setup,
@@ -306,13 +430,21 @@
     els.setup.hidden = !setup;
     els.orientation.textContent = horizontal ? "Horizontal" : "Vertical";
     els.start.disabled = !B.isFleetPlaced(game.player);
+    drawShips(els.playerBoard, game.player.ships.map((ship) => ({ ship, ghost: drag && drag.active && drag.id === ship.id })));
+    drawShips(
+      els.enemyBoard,
+      game.enemy.ships.filter((ship) => over || ship.hits.size === ship.length).map((ship) => ({ ship, ghost: ship.hits.size < ship.length })),
+    );
+
     els.shipList.innerHTML = "";
     for (const def of B.FLEET) {
       const li = els.shipList.appendChild(document.createElement("li"));
       const btn = li.appendChild(document.createElement("button"));
       const placed = game.player.ships.some((s) => s.id === def.id);
       btn.type = "button";
-      btn.textContent = `${def.name} (${def.length})`;
+      btn.dataset.ship = def.id;
+      btn.innerHTML = `<span class="mini" style="--len:${def.length}">${S.shipSvg(def.id, def.length)}</span><span>${def.name} (${def.length})</span>`;
+      btn.setAttribute("aria-label", `${def.name}, ${def.length} squares${placed ? ", placed" : ""}`);
       btn.classList.toggle("placed", placed);
       btn.setAttribute("aria-pressed", String(def.id === selectedShipId));
       btn.addEventListener("click", () => {
@@ -328,6 +460,24 @@
     els.aiStats.textContent = `Computer shots: ${stats.ai.shots} · hits: ${stats.ai.hits} · accuracy: ${accuracy(stats.ai)}%`;
   }
 
+  function drawShips(boardEl, list) {
+    for (const old of boardEl.querySelectorAll(".ship-shape")) old.remove();
+    for (const { ship, ghost } of list) {
+      const across = B.isHorizontal(ship);
+      const [r, c] = ship.cells[0];
+      const el = document.createElement("div");
+      el.className = "ship-shape";
+      el.classList.toggle("ghost", Boolean(ghost));
+      el.classList.toggle("sunk", ship.hits.size === ship.length);
+      el.dataset.ship = ship.id;
+      el.setAttribute("aria-hidden", "true");
+      el.style.gridRow = `${r + 2} / span ${across ? 1 : ship.length}`;
+      el.style.gridColumn = `${c + 2} / span ${across ? ship.length : 1}`;
+      el.innerHTML = `${S.shipSvg(ship.id, ship.length, across)}<span class="code">${S.CODES[ship.id]}</span>`;
+      boardEl.prepend(el);
+    }
+  }
+
   function drawFleet(list, board) {
     list.innerHTML = "";
     for (const def of B.FLEET) {
@@ -335,7 +485,8 @@
       const sunk = ship && ship.hits.size === ship.length;
       const li = list.appendChild(document.createElement("li"));
       li.className = sunk ? "sunk" : "";
-      li.innerHTML = `${def.name} <span class="pips" aria-hidden="true">${"■".repeat(def.length)}</span>`;
+      li.dataset.ship = def.id;
+      li.innerHTML = `<span class="mini" style="--len:${def.length}">${S.shipSvg(def.id, def.length)}</span> ${def.name} <span class="code">${S.CODES[def.id]}</span>`;
       if (sunk) li.append(" (sunk)");
     }
   }
@@ -347,13 +498,29 @@
 
   els.playerBoard.addEventListener("click", onPlayerBoardClick);
   els.enemyBoard.addEventListener("click", onEnemyBoardClick);
+  els.shipList.addEventListener("pointerdown", onPalettePointerDown);
+  els.playerBoard.addEventListener("pointerdown", onBoardPointerDown);
+  window.addEventListener("pointermove", onPointerMove, { passive: false });
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", cancelDrag);
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (!suppressClick) return;
+      suppressClick = false;
+      e.stopPropagation();
+      e.preventDefault();
+    },
+    true,
+  );
   els.playerBoard.addEventListener("mouseover", (e) => {
     const cell = cellFromEvent(e);
-    if (!cell || game.phase !== "setup") return;
+    if (!cell || game.phase !== "setup" || drag) return;
     hoverCell = cell;
     render();
   });
   els.playerBoard.addEventListener("mouseleave", () => {
+    if (drag) return;
     hoverCell = null;
     if (game.phase === "setup") render();
   });
@@ -368,7 +535,10 @@
   });
   document.addEventListener("keydown", (e) => {
     if ((e.key === "r" || e.key === "R") && !e.ctrlKey && !e.metaKey && !e.altKey) rotate();
-    if (e.key === "Escape") els.overlay.hidden = true;
+    if (e.key === "Escape") {
+      cancelDrag();
+      els.overlay.hidden = true;
+    }
   });
 
   newGame();

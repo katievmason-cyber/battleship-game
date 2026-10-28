@@ -14,7 +14,15 @@ Each entry records:
 
 ## Game bugs
 
-_None found. The rules engine and AI tests passed on the first run, and the recorded browser test of the live site found no reproducible game bugs (see [TESTING.md](TESTING.md))._
+### GAME-001: Placing a vertical ship stretched the board
+- **Found by:** Devin, checking screenshots while building ship shapes and drag-and-drop
+- **Symptom:** After a ship was placed vertically, Your fleet grew taller. The bottom row overlapped the "Computer shots" line underneath.
+- **Steps to reproduce:** On the ship-shapes branch before the fix, drag the Battleship onto the board, press R while dragging, and drop it.
+- **Root cause:** Each ship picture is an SVG inside an item that spans several grid squares. An SVG with no fixed size defaults to 150 px tall, and CSS grid rows grow to fit their contents, so the rows under a vertical ship got taller (`site/style.css`, `.ship-shape svg`).
+- **Fix:** The picture is now absolutely positioned inside its item, and the item has `min-height: 0`, so the picture fills whatever space the squares give it and never sets their size.
+- **Verification:** The board's measured height was 440 px both before and after Random placed vertical ships. Screenshots at desktop and 375 px widths show square cells and no overlap.
+
+Earlier phases: the rules engine and AI tests passed on the first run, and the recorded browser test of the live site found no reproducible game bugs (see [TESTING.md](TESTING.md)).
 
 One false alarm, not counted as a bug: during browser testing a fast double-click looked like it gave the player two shots in a row. Measuring showed the test tool had paused about 1 second between clicks, longer than the computer's 0.6-second "thinking" delay, so the computer had already replied. Re-tested with three real clicks 31 ms apart: exactly one shot was accepted.
 

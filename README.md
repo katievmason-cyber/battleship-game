@@ -1,6 +1,6 @@
 # Battleship vs. AI
 
-A browser Battleship game: you against a computer opponent. Plain HTML, CSS and JavaScript with no build step and no dependencies.
+A browser Battleship game: you against a computer opponent. Drag your ships onto the board (or click to place them), then take turns firing. Plain HTML, CSS and JavaScript with no build step and no dependencies.
 
 **Play it:** https://katievmason-cyber.github.io/battleship-game/
 

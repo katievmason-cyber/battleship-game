@@ -80,6 +80,31 @@
     return true;
   }
 
+  const isHorizontal = (ship) => ship.cells.length < 2 || ship.cells[0][0] === ship.cells[1][0];
+
+  // Like checkPlacement, but a ship that is already on the board may land on
+  // its own current squares (e.g. dragging it one square along).
+  function checkMove(board, shipId, row, col, horizontal) {
+    const ship = board.ships.find((s) => s.id === shipId);
+    if (!ship) return checkPlacement(board, shipId, row, col, horizontal);
+    const cells = shipCells(row, col, ship.length, horizontal);
+    if (!cells.every(([r, c]) => inBounds(r, c))) return { ok: false, reason: "out-of-bounds" };
+    const blocked = cells.some(([r, c]) => {
+      const other = board.occupied.get(key(r, c));
+      return other && other.id !== shipId;
+    });
+    if (blocked) return { ok: false, reason: "overlap" };
+    return { ok: true, cells };
+  }
+
+  // Moves (or first places) a ship. If the new spot is illegal the board is unchanged.
+  function moveShip(board, shipId, row, col, horizontal) {
+    const check = checkMove(board, shipId, row, col, horizontal);
+    if (!check.ok) return check;
+    removeShip(board, shipId);
+    return placeShip(board, shipId, row, col, horizontal);
+  }
+
   function isFleetPlaced(board) {
     return FLEET.every((def) => board.ships.some((s) => s.id === def.id));
   }
@@ -177,6 +202,9 @@
     checkPlacement,
     placeShip,
     removeShip,
+    isHorizontal,
+    checkMove,
+    moveShip,
     isFleetPlaced,
     placeFleetRandomly,
     receiveShot,
