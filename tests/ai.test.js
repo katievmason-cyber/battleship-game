@@ -1,14 +1,14 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const B = require("../site/js/game.js");
-const { createAI } = require("../site/js/ai.js");
-const { simulate, randomShooter } = require("../scripts/simulate.js");
+const { createAI, LEVELS, DEFAULT_LEVEL } = require("../site/js/ai.js");
+const { simulate, randomShooter, levelShooter } = require("../scripts/simulate.js");
 
 // Plays the AI against a fixed layout; fails on any repeated or off-board shot.
-function playLayout(layout, seed) {
+function playLayout(layout, seed, level = DEFAULT_LEVEL) {
   const board = B.createBoard();
   for (const [id, r, c, h] of layout) assert.ok(B.placeShip(board, id, r, c, h).ok, `bad layout: ${id}`);
-  const ai = createAI({ rng: B.createRng(seed) });
+  const ai = createAI({ rng: B.createRng(seed), level });
   const fired = new Set();
   let shots = 0;
   while (!B.allSunk(board)) {
@@ -118,6 +118,84 @@ test("once the checkerboard is used up it still finds the remaining squares", ()
 
 test("the AI only learns from shot results, never from the player's board", () => {
   const ai = createAI({ rng: B.createRng(1) });
-  assert.deepEqual(Object.keys(ai).sort(), ["nextShot", "record"]);
+  assert.deepEqual(Object.keys(ai).sort(), ["level", "nextShot", "record"]);
   assert.equal(createAI.length, 0);
+});
+
+// ---------- Difficulty levels ----------
+
+test("medium is the default difficulty", () => {
+  assert.equal(DEFAULT_LEVEL, "medium");
+  assert.equal(createAI().level, "medium");
+  assert.deepEqual([...LEVELS], ["easy", "medium", "hard"]);
+});
+
+test("rejects an unknown difficulty", () => {
+  assert.throws(() => createAI({ level: "impossible" }), /Unknown difficulty/);
+});
+
+test("every level never repeats a shot and always finishes within 100 shots", () => {
+  for (const level of LEVELS) {
+    const stats = simulate(300, levelShooter(level));
+    assert.ok(stats.max <= 100, `${level}: worst game took ${stats.max} shots`);
+  }
+});
+
+test("harder levels sink the fleet in fewer shots: hard < medium < easy < random", () => {
+  const mean = (level) => simulate(500, levelShooter(level)).mean;
+  const easy = mean("easy");
+  const medium = mean("medium");
+  const hard = mean("hard");
+  const random = simulate(500, randomShooter).mean;
+  assert.ok(hard < medium - 3, `hard ${hard} vs medium ${medium}`);
+  assert.ok(medium < easy - 8, `medium ${medium} vs easy ${easy}`);
+  assert.ok(easy < random - 15, `easy ${easy} vs random ${random}`);
+});
+
+test("hard and easy also finish off touching and packed ships", () => {
+  const layouts = [
+    [
+      ["carrier", 0, 0, true],
+      ["battleship", 1, 0, true],
+      ["cruiser", 2, 0, true],
+      ["submarine", 3, 0, true],
+      ["destroyer", 4, 0, true],
+    ],
+    [
+      ["carrier", 9, 5, true],
+      ["battleship", 5, 9, false],
+      ["cruiser", 6, 6, true],
+      ["submarine", 6, 5, false],
+      ["destroyer", 8, 6, true],
+    ],
+  ];
+  for (const level of ["easy", "hard"]) {
+    for (const layout of layouts) for (let seed = 1; seed <= 100; seed++) playLayout(layout, seed, level);
+  }
+});
+
+test("hard: after a single hit, the next shot is right next to it", () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    const ai = createAI({ rng: B.createRng(seed), level: "hard" });
+    ai.record(4, 4, { result: "hit" });
+    const [r, c] = ai.nextShot();
+    assert.equal(Math.abs(r - 4) + Math.abs(c - 4), 1);
+  }
+});
+
+test("hard: opens in the middle of the board, where ships are most likely", () => {
+  const [r, c] = createAI({ rng: B.createRng(1), level: "hard" }).nextShot();
+  assert.ok(r >= 3 && r <= 6 && c >= 3 && c <= 6, `opened at ${r},${c}`);
+});
+
+test("hard: once only the destroyer is left, it skips gaps too small to hold it", () => {
+  const ai = createAI({ rng: B.createRng(1), level: "hard", shipLengths: [2] });
+  // Leave a single open square at A1 boxed in by misses, plus open water elsewhere.
+  ai.record(0, 1, { result: "miss" });
+  ai.record(1, 0, { result: "miss" });
+  for (let i = 0; i < 80; i++) {
+    const [r, c] = ai.nextShot();
+    assert.ok(!(r === 0 && c === 0), "fired at a square no ship can fit in");
+    ai.record(r, c, { result: "miss" });
+  }
 });

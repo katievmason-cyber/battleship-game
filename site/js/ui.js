@@ -2,9 +2,15 @@
 // It holds no game rules of its own.
 (function () {
   const B = window.Battleship;
-  const { createAI } = window.BattleshipAI;
+  const { createAI, LEVELS, DEFAULT_LEVEL } = window.BattleshipAI;
   const S = window.BattleshipShapes;
   const AI_DELAY_MS = 600;
+  const DIFFICULTY_KEY = "battleship-difficulty";
+  const LEVEL_INFO = {
+    easy: { name: "Easy", hint: "Fires at random and often forgets to follow up a hit." },
+    medium: { name: "Medium", hint: "Searches in a checkerboard pattern and finishes off every hit." },
+    hard: { name: "Hard", hint: "Works out where your ships are most likely to be. Good luck!" },
+  };
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -29,6 +35,8 @@
     resultDetail: $("result-detail"),
     playAgain: $("play-again"),
     viewBoard: $("view-board"),
+    difficulty: $("difficulty"),
+    difficultyHint: $("difficulty-hint"),
   };
 
   let game;
@@ -41,6 +49,7 @@
   let lastShot;
   let drag = null;
   let suppressClick = false;
+  let difficulty = loadDifficulty();
 
   const cells = { player: [], enemy: [] };
 
@@ -268,11 +277,33 @@
     if (wasActive && game.phase === "setup") render();
   }
 
+  function loadDifficulty() {
+    try {
+      const saved = localStorage.getItem(DIFFICULTY_KEY);
+      if (LEVELS.includes(saved)) return saved;
+    } catch (_) {
+      // Storage can be blocked (private mode); just use the default.
+    }
+    return DEFAULT_LEVEL;
+  }
+
+  function setDifficulty(level) {
+    if (!LEVELS.includes(level) || game.phase !== "setup") return;
+    difficulty = level;
+    try {
+      localStorage.setItem(DIFFICULTY_KEY, level);
+    } catch (_) {
+      // Not saved for next time, but still used for this game.
+    }
+    render();
+  }
+
   function startBattle() {
     cancelDrag();
     if (!B.startBattle(game).ok) return;
+    ai = createAI({ level: difficulty });
     hoverCell = null;
-    setStatus("Battle stations! Your turn: pick a square in Enemy waters.");
+    setStatus(`Battle stations! You're playing the ${LEVEL_INFO[difficulty].name} computer. Your turn: pick a square in Enemy waters.`);
     render();
   }
 
@@ -338,7 +369,7 @@
     els.resultTitle.textContent = won ? "You win!" : "The computer wins";
     els.resultDetail.textContent = won
       ? `You sank the enemy fleet in ${stats.player.shots} shots (${accuracy(stats.player)}% accuracy).`
-      : `It sank your fleet in ${stats.ai.shots} shots. Its remaining ships are now shown.`;
+      : `The ${LEVEL_INFO[ai.level].name} computer sank your fleet in ${stats.ai.shots} shots. Its remaining ships are now shown.`;
     setStatus(`${els.resultTitle.textContent} Press New game to play again.`);
     render();
     els.overlay.hidden = false;
@@ -350,7 +381,7 @@
     clearTimeout(aiTimer);
     aiTimer = null;
     game = B.createGame();
-    ai = createAI();
+    ai = null;
     horizontal = true;
     hoverCell = null;
     lastShot = null;
@@ -430,6 +461,8 @@
     els.enemyBoard.classList.toggle("inactive", setup || game.phase === "ai");
 
     els.setup.hidden = !setup;
+    for (const input of els.difficulty.querySelectorAll("input")) input.checked = input.value === difficulty;
+    els.difficultyHint.textContent = LEVEL_INFO[difficulty].hint;
     els.orientation.textContent = horizontal ? "Horizontal" : "Vertical";
     els.start.disabled = !B.isFleetPlaced(game.player);
     drawShips(els.playerBoard, game.player.ships.map((ship) => ({ ship, ghost: drag && drag.active && drag.id === ship.id })));
@@ -530,6 +563,7 @@
   els.random.addEventListener("click", randomFleet);
   els.clear.addEventListener("click", clearFleet);
   els.start.addEventListener("click", startBattle);
+  els.difficulty.addEventListener("change", (e) => setDifficulty(e.target.value));
   els.newGame.addEventListener("click", newGame);
   els.playAgain.addEventListener("click", newGame);
   els.viewBoard.addEventListener("click", () => {

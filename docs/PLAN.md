@@ -94,7 +94,10 @@ This is a classic rule-based strategy ("hunt and target"), not ChatGPT-style AI.
 4. **Sunk.** When the referee says "sunk", the AI crosses that ship off and goes back to hunting, unless it still has unexplained hits (which happens when two ships are touching).
 5. **Small human touch.** A short pause (~0.5 s) before the AI fires, so the player can follow what's happening.
 
-**Optional "Hard" mode (stretch goal):** for every unknown square, count how many ways the remaining ships could still fit over it, and fire at the most likely square. Stronger (~40–45 shots), more complex to explain and test.
+**Difficulty levels (added after launch).** The player picks Easy, Medium or Hard before the battle:
+- **Easy:** fires at random and only follows up a hit about 30% of the time.
+- **Medium (default):** the hunt-and-target strategy above.
+- **Hard:** for every unknown square, count how many ways the remaining ships could still fit over it, and fire at the most likely square. While a ship is damaged, only count the ways that pass through the hits.
 
 ---
 
