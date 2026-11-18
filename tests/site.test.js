@@ -24,3 +24,9 @@ test("all local assets referenced by index.html are relative and exist", () => {
     assert.ok(files.includes(path.basename(ref)), `${ref} does not exist (check case)`);
   }
 });
+
+test("the setup panel offers Easy, Medium and Hard difficulty", () => {
+  for (const level of ["easy", "medium", "hard"]) {
+    assert.match(html, new RegExp(`<input type="radio" name="difficulty" value="${level}"`));
+  }
+});

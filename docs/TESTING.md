@@ -1,16 +1,18 @@
 # Test results
 
 ## Automated tests
-`npm test` runs 41 tests (Node's built-in test runner) on every pull request and before every deploy:
+`npm test` runs 50 tests (Node's built-in test runner) on every pull request and before every deploy:
 - **Rules engine** (`tests/game.test.js`, 25 tests): placement at edges, rotation, overlap, touching ships, moving and rotating a placed ship (illegal moves leave it where it was, and no moving once the battle has started), random placement over 500 seeds, hit/miss/sunk, repeat shots, turn order, game over.
-- **AI** (`tests/ai.test.js`, 11 tests): no repeated or off-board shots over 1,000 games, beats random guessing, follows a ship's line, turns around at water, handles ships packed together or in corners, and only sees its own shot results.
+- **AI** (`tests/ai.test.js`, 19 tests): no repeated or off-board shots over 1,000 games, beats random guessing, follows a ship's line, turns around at water, handles ships packed together or in corners, and only sees its own shot results. Difficulty levels: every level finishes every game without repeats, Hard beats Medium beats Easy beats random, Hard opens in the middle, follows up hits, and skips gaps too small for the ships left.
 - **Ship pictures** (`tests/ships.test.js`, 3 tests): every ship has its own picture and code, sized to its length and turned when vertical.
-- **Site** (`tests/site.test.js`, 2 tests): page metadata, and every file the page loads exists with the exact same name (GitHub Pages is case-sensitive).
+- **Site** (`tests/site.test.js`, 3 tests): page metadata, every file the page loads exists with the exact same name (GitHub Pages is case-sensitive), and the Easy/Medium/Hard picker is on the page.
 
 ## AI strength (`node scripts/simulate.js 1000`)
 | | Mean shots | Median | Best | Worst |
 |---|---|---|---|---|
-| Hunt/target AI | 51.4 | 53 | 23 | 69 |
+| Easy AI | 67.7 | 67 | 31 | 100 |
+| Medium AI (hunt/target) | 51.4 | 53 | 23 | 69 |
+| Hard AI (probability) | 44.5 | 44 | 24 | 71 |
 | Random guessing | 95.7 | 97 | 70 | 100 |
 
 ## Browser test of the live site

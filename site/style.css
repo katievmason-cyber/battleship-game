@@ -82,6 +82,30 @@ button:focus-visible { outline: 3px solid var(--highlight); outline-offset: 2px;
 }
 #setup[hidden] { display: none; }
 
+.difficulty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  border: 0;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+.difficulty legend { float: left; margin-right: 0.25rem; font-weight: 600; }
+.difficulty label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.difficulty label:has(input:checked) { border-color: var(--accent); background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.difficulty label:has(input:focus-visible) { outline: 3px solid var(--highlight); outline-offset: 2px; }
+.difficulty input { accent-color: var(--on-accent); margin: 0; }
+.difficulty .hint { color: var(--muted); font-size: 0.95rem; }
+
 #ship-list {
   list-style: none;
   display: flex;

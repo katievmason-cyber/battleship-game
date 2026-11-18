@@ -22,7 +22,12 @@ npm test           # Node 20+ built-in test runner, no installs needed
 - Every merge to `main` runs the tests again and, if they pass, publishes `site/` to GitHub Pages (`.github/workflows/deploy.yml`).
 
 ## The AI opponent
-`site/js/ai.js` uses "hunt and target": it searches on a checkerboard pattern, fires next to any hit, then follows the line of a ship until it sinks. It only sees the results of its own shots. Run the simulator to see how well it plays:
+Pick a difficulty before you start the battle (your choice is remembered for next time). All three levels live in `site/js/ai.js` and only ever see the results of their own shots:
+- **Easy** fires at random and only follows up a hit about a third of the time.
+- **Medium** (default) uses "hunt and target": it searches on a checkerboard pattern, fires next to any hit, then follows the line of a ship until it sinks.
+- **Hard** counts every way the ships still afloat could fit on the board and fires at the square most likely to hold one.
+
+Run the simulator to see how well each level plays:
 ```
 node scripts/simulate.js 1000
 ```

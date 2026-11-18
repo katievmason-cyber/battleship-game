@@ -1,9 +1,11 @@
 // Plays the AI against many random fleets and reports how many shots it needs.
 // Usage: node scripts/simulate.js [games]
 const B = require("../site/js/game.js");
-const { createAI } = require("../site/js/ai.js");
+const { LEVELS, DEFAULT_LEVEL, createAI } = require("../site/js/ai.js");
 
-function playOne(seed, makeShooter = (rng) => createAI({ rng })) {
+const levelShooter = (level) => (rng) => createAI({ rng, level });
+
+function playOne(seed, makeShooter = levelShooter(DEFAULT_LEVEL)) {
   const rng = B.createRng(seed);
   const board = B.placeFleetRandomly(B.createBoard(), rng);
   const ai = makeShooter(rng);
@@ -40,11 +42,11 @@ function simulate(games = 1000, makeShooter) {
   return { games, mean, min: results[0], median: results[Math.floor(games / 2)], max: results[games - 1] };
 }
 
-module.exports = { playOne, simulate, randomShooter };
+module.exports = { playOne, simulate, randomShooter, levelShooter };
 
 if (require.main === module) {
   const games = Number(process.argv[2]) || 1000;
   const fmt = (s) => `mean ${s.mean.toFixed(1)}, median ${s.median}, best ${s.min}, worst ${s.max}`;
-  console.log(`Hunt/target AI over ${games} games: ${fmt(simulate(games))}`);
+  for (const level of LEVELS) console.log(`${level.padEnd(6)} AI over ${games} games: ${fmt(simulate(games, levelShooter(level)))}`);
   console.log(`Random guessing over ${games} games: ${fmt(simulate(games, randomShooter))}`);
 }
